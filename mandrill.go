@@ -9,11 +9,8 @@ import (
 )
 
 type Client struct {
-	// API key
 	Key string
-	// API endpoint "https://mandrillapp.com/api/1.0/"
 	BaseURL string
-	// Http client
 	HTTPClient *http.Client
 }
 
@@ -93,9 +90,7 @@ type Message struct {
 
 type To struct {
 	Email string `json:"email"`
-	// the optional display name to use for the recipient
 	Name string `json:"name,omitempty"`
-	// the header type to use for the recipient, defaults to "to" if not provided
 	Type string `json:"type,omitempty"`
 }
 
@@ -113,21 +108,15 @@ type RcptMergeVars struct {
 	Vars []*Variable `json:"vars"`
 }
 
-// RcptMetadata holds metadata for a single recipient
 type RcptMetadata struct {
-	// the email address of the recipient that the metadata is associated with
 	Rcpt string `json:"rcpt"`
-	// an associated array containing the recipient's unique metadata. If a key exists in both the per-recipient metadata and the global metadata, the per-recipient metadata will be used.
 	Values map[string]interface{} `json:"values"`
 }
 
 // Attachment represents a single supported attachment
 type Attachment struct {
-	// the MIME type
 	Type string `json:"type"`
-	// the file name
 	Name string `json:"name"`
-	// the content as a base64-encoded string
 	Content string `json:"content"`
 }
 
@@ -138,7 +127,6 @@ type Response struct {
 	Status string `json:"status"`
 	// the reason for the rejection if the recipient status is "rejected" - one of "hard-bounce", "soft-bounce", "spam", "unsub", "custom", "invalid-sender", "invalid", "test-mode-limit", or "rule"
 	RejectionReason string `json:"reject_reason"`
-	// unique id
 	Id string `json:"_id"`
 }
 
@@ -160,7 +148,7 @@ func (err Error) Error() string {
 	return err.Message
 }
 
-// ClientWithKey returns a mandrill.Client pointer armed with the supplied Mandrill API key
+// ClientWithKey returns a mandrill.Client
 func ClientWithKey(key string) *Client {
 	return &Client{
 		Key:        key,
@@ -175,7 +163,11 @@ func (c *Client) Ping() (pong string, err error) {
 	}
 
 	data.Key = c.Key
-
+      - uses: actions/checkout@v2
+      - name: Setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
 	body, err := c.sendApiRequest(data, "users/ping.json")
 	if err != nil {
 		return pong, err
@@ -185,7 +177,6 @@ func (c *Client) Ping() (pong string, err error) {
 	return pong, err
 }
 
-// MessagesSend sends a message via an API client
 func (c *Client) MessagesSend(message *Message) (responses []*Response, err error) {
 
 	var data struct {
@@ -205,7 +196,6 @@ func (c *Client) MessagesSend(message *Message) (responses []*Response, err erro
 	return c.sendMessagePayload(data, "messages/send")
 }
 
-// MessagesSendTemplate sends a message using a Mandrill template
 func (c *Client) MessagesSendTemplate(message *Message, templateName string, contents interface{}) (responses []*Response, err error) {
 
 	var data struct {
@@ -263,14 +253,11 @@ func (c *Client) sendApiRequest(data interface{}, path string) (body []byte, err
 	return body, err
 }
 
-// AddRecipient appends a recipient to the message
-// easier than message.To = []*To{&To{email, name}}
 func (m *Message) AddRecipient(email string, name string, sendType string) {
 	to := &To{email, name, sendType}
 	m.To = append(m.To, to)
 }
 
-// ConvertMapToVariables converts a regular string/string map into the Variable struct
 func ConvertMapToVariables(i interface{}) []*Variable {
 	imap := map[string]interface{}{}
 
@@ -293,17 +280,14 @@ func ConvertMapToVariables(i interface{}) []*Variable {
 	return variables
 }
 
-// MapToVars converts a regular string/string map into the Variable struct
 func MapToVars(m interface{}) []*Variable {
 	return ConvertMapToVariables(m)
 }
 
-// ConvertMapToVariablesForRecipient converts a regular string/string map into the RcptMergeVars struct
 func ConvertMapToVariablesForRecipient(email string, m interface{}) *RcptMergeVars {
 	return &RcptMergeVars{Rcpt: email, Vars: ConvertMapToVariables(m)}
 }
 
-// MapToRecipientVars converts a regular string/string map into the RcptMergeVars struct
 func MapToRecipientVars(email string, m interface{}) *RcptMergeVars {
 	return ConvertMapToVariablesForRecipient(email, m)
 }
